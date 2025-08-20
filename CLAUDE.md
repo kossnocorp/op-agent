@@ -17,6 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `op-agent start` - Start server in interactive mode (prompts for new command approval)
 - `op-agent start --non-interactive` - Only allow pre-approved commands from config
 - `op-agent start --insecure` - Disable all security checks (NOT RECOMMENDED)
+- `op-agent approve op [command...]` - Pre-approve a command without executing it
 
 ### Testing and Code Quality
 

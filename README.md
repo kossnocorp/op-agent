@@ -8,7 +8,7 @@ It consists of two binaries: a server (`op-agent`) that runs on the host and a c
 
 ## Installation
 
-Download the appropriate binaries for your platform from the releases page, or build from source:
+[Download the `op-agent` and `op-agent-client`](https://github.com/kossnocorp/op-agent/releases/latest) binaries for your platform from the releases page, or build from source:
 
 ```sh
 go build -o ./dist/op-agent ./cmd/op-agent
@@ -30,11 +30,12 @@ op-agent start --non-interactive
 op-agent start --insecure
 ```
 
-Then run `op-agent-client` in a container:
+### Pre-Approve
+
+You can pre-approve commands, which is useful in the non-interactive mode:
 
 ```sh
-# Run `op list vaults` on the host and get the response
-op-agent op list vaults
+op-agent approve op item get "AWS Token" --vault "Private" --format json
 ```
 
 ### Port

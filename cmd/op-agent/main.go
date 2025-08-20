@@ -155,6 +155,26 @@ func approveCommand(args []string) (bool, internal.ApprovalSource, bool, error) 
 	return approved, source, persistent, nil
 }
 
+func preApproveCommand(args []string) error {
+	config, err := internal.LoadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %v", err)
+	}
+
+	if config.IsCommandApproved(args) {
+		fmt.Printf("Command already approved: op %s\n", strings.Join(args, " "))
+		return nil
+	}
+
+	config.AddApprovedCommand(args)
+
+	if err := config.SaveConfig(); err != nil {
+		return fmt.Errorf("failed to save config: %v", err)
+	}
+
+	return nil
+}
+
 func readSingleChar() (byte, error) {
 	// Try to set terminal to raw mode for immediate input
 	sttyCmd := exec.Command("stty", "-icanon", "-echo", "min", "1", "time", "0")
@@ -255,7 +275,32 @@ func main() {
 	startCmd.Flags().BoolVar(&insecureMode, "insecure", false, "Disable command approval checks (UNSAFE)")
 	startCmd.Flags().BoolVar(&nonInteractive, "non-interactive", false, "Run in non-interactive mode (only allow pre-approved commands)")
 
+	approveCmd := &cobra.Command{
+		Use:                "approve op [command...]",
+		Short:              "Pre-approve a 1Password CLI command",
+		Long:               "Add a 1Password CLI command to the approved commands list without executing it.",
+		DisableFlagParsing: true,
+		Run: func(cmd *cobra.Command, args []string) {
+			if args[0] != "op" {
+				fmt.Fprintf(os.Stderr, "Error: First argument must be 'op'\n")
+				fmt.Fprintf(os.Stderr, "Usage: op-agent approve op [command...]\n")
+				os.Exit(1)
+			}
+
+			// Everything after 'op' is the command to approve
+			opArgs := args[1:]
+
+			if err := preApproveCommand(opArgs); err != nil {
+				fmt.Fprintf(os.Stderr, "Error approving command: %v\n", err)
+				os.Exit(1)
+			}
+
+			fmt.Printf("🟢 Command approved: op %s\n", strings.Join(opArgs, " "))
+		},
+	}
+
 	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(approveCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
