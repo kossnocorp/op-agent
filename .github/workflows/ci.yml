@@ -24,7 +24,7 @@ jobs:
         cache: true
 
     - name: Install just
-      uses: extractions/setup-just@v2
+      uses: extractions/setup-just@v3
 
     - name: Run go vet
       run: go vet ./...
