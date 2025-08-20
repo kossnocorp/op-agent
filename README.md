@@ -60,6 +60,32 @@ OP_AGENT_HOST=192.168.1.100 op-agent
 OP_AGENT_HOST=192.168.1.100 op-agent-client op whoami
 ```
 
+## Security
+
+### Binary Verification
+
+All release binaries are cryptographically signed using [GitHub's artifact attestations](https://docs.github.com/en/actions/concepts/security/artifact-attestations). You can verify that any binary was built from the exact source code in this repository:
+
+```sh
+gh attestation verify <binary> --owner kossnocorp
+```
+
+This provides tamper-proof assurance that the binary hasn't been modified since it was built from the tagged source code.
+
+### Why Not 1Password Service Accounts?
+
+[1Password Service Accounts](https://developer.1password.com/docs/service-accounts/) is one of the recommended ways to authenticate 1Password CLI for dev containers and CI/CD. They offer fine-grained scoping and are designed for automated use cases. However, they rely on bearer tokens that can be easily accessed by malicious code running in a remote environment and replayed until you rotate or revoke it.
+
+`op-agent` takes a different approach that is better suited for dev containers. Instead of dropping long-lived tokens into containers, it proxies the 1Password CLI through a local agent that leverages the host's biometric authentication. The 1Password approval expires after 10 minutes, adding an extra security layer to the setup.
+
+This reduces replay risk if a container is compromised, since access is anchored to the developer's presence and device rather than a static credential.
+
+#### When to Use Which
+
+- **Service Accounts**: Headless services, CI/CD, and infrastructure automation that can't depend on human interaction. Accept the operational overhead of scoping and rotating tokens.
+
+- **`op-agent`**: Developer machines and dev containers where tying access to the developer presence is preferable to embedding reusable tokens.
+
 ## Changelog
 
 See [the changelog](./CHANGELOG.md).

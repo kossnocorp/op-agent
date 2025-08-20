@@ -12,6 +12,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `just build-all` - Build for all supported platforms (Linux, macOS, Windows)
 - `just clean` - Remove all built binaries
 
+### Testing and Code Quality
+
+- `go test ./...` - Run tests (though no test files currently exist)
+- `go fmt ./...` - Format Go code
+- `go vet ./...` - Run Go static analysis
+
+## CI/CD
+
+The repository includes GitHub Actions workflows:
+
+- **CI Workflow** (`.github/workflows/ci.yml`) - Runs on push/PR to main branch
+
+  - Runs `go vet`, `go fmt`, `go test`.
+  - Builds binaries to ensure compilation works.
+  - Triggered on push to main and pull requests.
+
+- **Release Workflow** (`.github/workflows/release.yml`) - Creates releases with artifact attestations.
+  - Triggered on git tag push (e.g., `git tag v1.0.0 && git push origin v1.0.0`).
+  - Builds binaries for all platforms (Linux, macOS, Windows) in both `amd64` and `arm64`.
+  - Generates cryptographic attestations using GitHub's Sigstore integration.
+  - Creates GitHub release with attested binaries and checksums.
+  - Users can verify binaries with: `gh attestation verify <binary> --owner <owner>`.
+
 ## Architecture
 
 This is a client-server system that enables 1Password CLI access from containers by proxying commands through HTTP.
