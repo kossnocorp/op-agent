@@ -29,7 +29,7 @@ Here's an example of an Ansible playbook to install `op-agent` and `op-agent-cli
   hosts: localhost
   connection: local
   vars:
-    op_agent_version: "0.2.0"
+    op_agent_version: "0.2.1"
     op_agent_install_dir: "{{ ansible_env.HOME }}/.local/bin"
     op_agent_arch_map:
       x86_64: amd64
