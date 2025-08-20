@@ -79,17 +79,15 @@ func main() {
 				}
 			}
 
-			// If no 'op' found, show help
+			// Distinguish client and command flags
+			var clientArgs []string
 			if opIndex == -1 {
-				cmd.Help()
-				return
+				clientArgs = args
+			} else {
+				clientArgs = args[:opIndex] // before `op`
 			}
+			opArgs := args[opIndex+1:] // After 'op'
 
-			// Parse client flags that appear BEFORE 'op'
-			clientArgs := args[:opIndex]
-			opArgs := args[opIndex+1:] // Everything after 'op'
-
-			// Handle client flags (only those before 'op')
 			for _, arg := range clientArgs {
 				switch arg {
 				case "--version":
@@ -101,6 +99,12 @@ func main() {
 					cmd.Help()
 					return
 				}
+			}
+
+			// Fall back to help if op is not found and we did't handle any other flags.
+			if opIndex == -1 {
+				cmd.Help()
+				return
 			}
 
 			// Execute the op command with all arguments after 'op'

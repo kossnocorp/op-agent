@@ -8,6 +8,12 @@ This change log follows the format documented in [Keep a CHANGELOG].
 [semantic versioning]: http://semver.org/
 [keep a changelog]: http://keepachangelog.com/
 
+## v0.2.1 - 2025-08-20
+
+### Fixed
+
+- Fixed `op-agent-client` not handling `--version` and other flags properly.
+
 ## v0.2.0 - 2025-08-20
 
 ### Added
