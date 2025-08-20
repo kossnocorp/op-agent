@@ -62,45 +62,53 @@ func executeOpCommand(args []string, quiet bool) {
 }
 
 func main() {
-	var versionFlag bool
 	var quietFlag bool
 
 	rootCmd := &cobra.Command{
-		Use:   "op-agent-client",
-		Short: "1Password CLI agent client",
-		Long:  "op-agent-client connects to op-agent server to execute 1Password CLI commands.",
+		Use:                "op-agent-client [flags] op [command...]",
+		Short:              "1Password CLI agent client",
+		Long:               "op-agent-client connects to op-agent server to execute 1Password CLI commands.",
+		DisableFlagParsing: true, // Parse flags manually to avoid conflicts with 'op' command flags
 		Run: func(cmd *cobra.Command, args []string) {
-			if versionFlag {
-				version()
+			// Find the position of 'op' command
+			opIndex := -1
+			for i, arg := range args {
+				if arg == "op" {
+					opIndex = i
+					break
+				}
+			}
+			
+			// If no 'op' found, show help
+			if opIndex == -1 {
+				cmd.Help()
 				return
 			}
-			cmd.Help()
+			
+			// Parse client flags that appear BEFORE 'op'
+			clientArgs := args[:opIndex]
+			opArgs := args[opIndex+1:] // Everything after 'op'
+			
+			// Handle client flags (only those before 'op')
+			for _, arg := range clientArgs {
+				switch arg {
+				case "--version":
+					version()
+					return
+				case "-q", "--quiet":
+					quietFlag = true
+				case "-h", "--help":
+					cmd.Help()
+					return
+				}
+			}
+			
+			// Execute the op command with all arguments after 'op'
+			executeOpCommand(opArgs, quietFlag)
 		},
 	}
 
-	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "Print version information")
-	rootCmd.PersistentFlags().BoolVarP(&quietFlag, "quiet", "q", false, "Suppress version mismatch warnings")
-
-	versionCmd := &cobra.Command{
-		Use:   "version",
-		Short: "Print version information",
-		Run: func(cmd *cobra.Command, args []string) {
-			version()
-		},
-	}
-
-	opCmd := &cobra.Command{
-		Use:   "op [arguments...]",
-		Short: "Execute op command via op-agent",
-		Long:  "Execute 1Password CLI command by forwarding it to the op-agent server.",
-		Args:  cobra.ArbitraryArgs,
-		Run: func(cmd *cobra.Command, args []string) {
-			executeOpCommand(args, quietFlag)
-		},
-	}
-
-	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(opCmd)
+	// No subcommands needed since we handle everything in the root command
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

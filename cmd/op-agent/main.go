@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,11 +10,17 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"syscall"
 
 	opagent "github.com/kossnocorp/op-agent"
 	"github.com/kossnocorp/op-agent/internal"
 	"github.com/spf13/cobra"
+)
+
+var (
+	insecureMode   bool
+	nonInteractive bool
 )
 
 func handleOpCommand(w http.ResponseWriter, r *http.Request) {
@@ -28,28 +35,169 @@ func handleOpCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cmd := exec.Command("op", args...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	var approved bool
+	var persistent bool
 
-	exitCode := 0
-	if err := cmd.Run(); err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			exitCode = exitError.Sys().(syscall.WaitStatus).ExitStatus()
-		} else {
-			exitCode = 1
+	// Approve command unless in insecure mode
+	if !insecureMode {
+		approved_, source, persistent_, err := approveCommand(args)
+		if err != nil {
+			fmt.Printf("Error checking command approval: %v\n", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		approved = approved_
+		persistent = persistent_
+
+		if logErr := internal.LogCommandRequest(args, approved_, source); logErr != nil {
+			fmt.Printf("Warning: Failed to log command: %v\n", logErr)
+		}
+	} else {
+		approved = true
+		persistent = false
+
+		if logErr := internal.LogCommandRequest(args, true, internal.ApprovalSourceInsecure); logErr != nil {
+			fmt.Printf("Warning: Failed to log command: %v\n", logErr)
 		}
 	}
 
-	response := internal.OpResponse{
-		Stdout: stdout.String(),
-		Stderr: stderr.String(),
-		Exit:   exitCode,
+	var response internal.OpResponse
+
+	if approved {
+		cmd := exec.Command("op", args...)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+
+		exitCode := 0
+		if err := cmd.Run(); err != nil {
+			if exitError, ok := err.(*exec.ExitError); ok {
+				exitCode = exitError.Sys().(syscall.WaitStatus).ExitStatus()
+			} else {
+				exitCode = 1
+			}
+		}
+
+		// Save command to config only if it succeeded and was approved with "always"
+		if !insecureMode && persistent && exitCode == 0 {
+			config, err := internal.LoadConfig()
+			if err != nil {
+				fmt.Printf("Warning: Failed to load config for saving: %v\n", err)
+			} else {
+				config.AddApprovedCommand(args)
+
+				if saveErr := config.SaveConfig(); saveErr != nil {
+					fmt.Printf("Warning: Failed to save approved command to config: %v\n", saveErr)
+				}
+			}
+		}
+
+		response = internal.OpResponse{
+			Stdout: stdout.String(),
+			Stderr: stderr.String(),
+			Exit:   exitCode,
+		}
+	} else {
+		response = internal.OpResponse{
+			Stdout: "",
+			Stderr: "The command wasn't approved by the host",
+			Exit:   1,
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+func approveCommand(args []string) (bool, internal.ApprovalSource, bool, error) {
+	config, err := internal.LoadConfig()
+	if err != nil {
+		return false, internal.ApprovalSourceNonInteractive, false, fmt.Errorf("failed to load config: %v", err)
+	}
+
+	if config.IsCommandApproved(args) {
+		return true, internal.ApprovalSourceConfig, false, nil
+	}
+
+	// If not interactive mode, deny commands not in config
+	if nonInteractive || !internal.IsInteractive() {
+		return false, internal.ApprovalSourceNonInteractive, false, nil
+	}
+
+	commandStr := strings.Join(args, " ")
+	fmt.Printf("\n🔵 Command approval required:\n\n   op %s\n\n", commandStr)
+	fmt.Printf("Approve? (y/o)nce, (a)lways, anything else for no: ")
+
+	char, err := readSingleChar()
+	if err != nil {
+		return false, "", false, fmt.Errorf("failed to read input: %v", err)
+	}
+	response := strings.ToLower(string(char))
+
+	fmt.Printf("\n")
+
+	var approved = false
+	var source = internal.ApprovalSourceInteractiveDenied
+	var persistent = false
+
+	switch response {
+	case "o", "y":
+		approved = true
+		source = internal.ApprovalSourceInteractiveOnce
+		persistent = false
+	case "a":
+		approved = true
+		source = internal.ApprovalSourceInteractiveAlways
+		persistent = true
+	}
+
+	return approved, source, persistent, nil
+}
+
+func readSingleChar() (byte, error) {
+	// Try to set terminal to raw mode for immediate input
+	sttyCmd := exec.Command("stty", "-icanon", "-echo", "min", "1", "time", "0")
+	sttyCmd.Stdin = os.Stdin
+	sttyCmd.Stdout = os.Stdout
+	sttyCmd.Stderr = os.Stderr
+
+	if err := sttyCmd.Run(); err != nil {
+		// Fallback: if stty fails, just read normally
+		fmt.Printf("(Press Enter after choice) ")
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return 0, err
+		}
+		input = strings.TrimSpace(input)
+		if len(input) > 0 {
+			return input[0], nil
+		}
+		return 'n', nil // Default to 'no'
+	}
+
+	// Restore normal terminal behavior on exit
+	defer func() {
+		restoreCmd := exec.Command("stty", "icanon", "echo")
+		restoreCmd.Stdin = os.Stdin
+		restoreCmd.Stdout = os.Stdout
+		restoreCmd.Stderr = os.Stderr
+		restoreCmd.Run()
+		fmt.Printf("\n") // Add newline after character input
+	}()
+
+	// Read single character
+	var char [1]byte
+	n, err := os.Stdin.Read(char[:])
+	if err != nil {
+		return 0, err
+	}
+	if n == 0 {
+		return 'n', nil // Default to 'no'
+	}
+
+	return char[0], nil
 }
 
 func handleHandshake(w http.ResponseWriter, r *http.Request) {
@@ -89,6 +237,8 @@ func main() {
 	}
 
 	rootCmd.Flags().BoolVar(&versionFlag, "version", false, "Print version information")
+	rootCmd.Flags().BoolVar(&insecureMode, "insecure", false, "Disable command approval checks (UNSAFE)")
+	rootCmd.Flags().BoolVar(&nonInteractive, "non-interactive", false, "Run in non-interactive mode (only allow pre-approved commands)")
 
 	startCmd := &cobra.Command{
 		Use:   "start",
@@ -101,6 +251,9 @@ func main() {
 			}
 		},
 	}
+
+	startCmd.Flags().BoolVar(&insecureMode, "insecure", false, "Disable command approval checks (UNSAFE)")
+	startCmd.Flags().BoolVar(&nonInteractive, "non-interactive", false, "Run in non-interactive mode (only allow pre-approved commands)")
 
 	rootCmd.AddCommand(startCmd)
 
@@ -119,13 +272,17 @@ func startServer() error {
 		fmt.Printf("Port %d unavailable, using %d. Set %s=%d\n", internal.StandardPort, port, internal.AgentPortEnvName, port)
 	}
 
+	if insecureMode {
+		fmt.Printf("🟡 WARNING: Running in INSECURE mode - all commands will be allowed!\n")
+	}
+
 	opPath := fmt.Sprintf("/%s", internal.AgentCommandOp)
 	http.HandleFunc(opPath, handleOpCommand)
 
 	handshakePath := fmt.Sprintf("/%s", internal.AgentCommandHandshake)
 	http.HandleFunc(handshakePath, handleHandshake)
 
-	fmt.Printf("op-agent listening on :%d\n", port)
+	fmt.Printf("🟣 op-agent listening on :%d\n\n", port)
 	return http.ListenAndServe(":"+strconv.Itoa(port), nil)
 }
 

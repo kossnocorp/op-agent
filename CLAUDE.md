@@ -12,6 +12,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `just build-all` - Build for all supported platforms (Linux, macOS, Windows)
 - `just clean` - Remove all built binaries
 
+### Server Operation
+
+- `op-agent start` - Start server in interactive mode (prompts for new command approval)
+- `op-agent start --non-interactive` - Only allow pre-approved commands from config
+- `op-agent start --insecure` - Disable all security checks (NOT RECOMMENDED)
+
 ### Testing and Code Quality
 
 - `go test ./...` - Run tests (though no test files currently exist)
@@ -84,6 +90,23 @@ This is a client-server system that enables 1Password CLI access from containers
 - Container auto-detection for host resolution.
 - Version mismatch warnings between client/server.
 - Graceful port fallback when default unavailable.
+- **Command approval system** for enhanced security - prompts for approval of new commands.
+- **Configuration management** using plain JSON (avoiding additional dependencies).
+- **Command logging** with timestamps for audit trails.
+
+### Security Features
+
+**Command Approval System**: By default, the server requires approval for new 1Password CLI commands:
+- Interactive mode: Prompts user for approval (once/always/no)
+- Non-interactive mode: Only allows pre-approved commands from config
+- Insecure mode: Disables all checks (use `--insecure` flag)
+
+**Configuration Storage**: 
+- Config: `~/.config/op-agent/config.json` (macOS/Linux) or `%APPDATA%/op-agent/config.json` (Windows)
+- Logs: `~/.local/share/op-agent/commands.log` (macOS/Linux) or `%APPDATA%/op-agent/commands.log` (Windows)
+- Uses plain JSON to minimize attack surface (no additional dependencies)
+
+**Interactive Detection**: Automatically detects CI/CD environments and non-interactive terminals using common environment variables.
 
 ### Version Management
 

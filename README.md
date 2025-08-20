@@ -11,11 +11,8 @@ It consists of two binaries: a server (`op-agent`) that runs on the host and a c
 Download the appropriate binaries for your platform from the releases page, or build from source:
 
 ```sh
-# Build for current platform
-just build
-
-# Build for all platforms
-just build-all
+go build -o ./dist/op-agent ./cmd/op-agent
+go build -o ./dist/op-agent-client ./cmd/op-agent-client
 ```
 
 ## Usage
@@ -25,6 +22,12 @@ Start the `op-agent` server on your host machine:
 ```sh
 # Start server at localhost:25519
 op-agent start
+
+# Start in non-interactive mode (only pre-approved commands)
+op-agent start --non-interactive
+
+# Start in insecure mode (UNSAFE - allows all commands)
+op-agent start --insecure
 ```
 
 Then run `op-agent-client` in a container:
@@ -71,6 +74,30 @@ gh attestation verify <binary> --owner kossnocorp
 ```
 
 This provides tamper-proof assurance that the binary hasn't been modified since it was built from the tagged source code.
+
+### Command Approval
+
+By default, `op-agent` implements a command approval system for enhanced security. When a new 1Password CLI command is requested:
+
+- **Interactive mode** (default): Prompts you to approve each new command with options:
+
+  - `once` - Allow this command once
+  - `always` - Allow this command always (saves to config)
+  - `no` - Deny the command (default)
+
+- **Non-Interactive mode** (`--non-interactive`): Only allows pre-approved commands from the config file
+
+- **Insecure mode** (`--insecure`): Disables all security checks (**NOT RECOMMENDED**)
+
+Approved commands are stored in `~/.config/op-agent/config.json` on macOS/Linux and `%APPDATA%/op-agent/config.json` on Windows.
+
+All command executions are logged in `~/.local/share/op-agent/commands.log` on macOS/Linux and `%APPDATA%/op-agent/commands.log` on Windows.
+
+### Dependencies
+
+To reduce the vector of the attack, minimize used dependencies (i.e., we don't use more convenient TOML/YAML for the config in favor of vanilla JSON).
+
+To keep dependencies up-to-date, we have GitHub Actions set up to automatically check for updates and create pull requests.
 
 ### Why Not 1Password Service Accounts?
 
