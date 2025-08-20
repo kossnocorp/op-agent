@@ -8,6 +8,12 @@ This change log follows the format documented in [Keep a CHANGELOG].
 [semantic versioning]: http://semver.org/
 [keep a changelog]: http://keepachangelog.com/
 
+## v0.2.2 - 2025-08-21
+
+### Fixed
+
+- Fixed approved commands string arguments losing argument boundaries, i.e., `--format json "age key"` being stored as `--format json age key`.
+
 ## v0.2.1 - 2025-08-20
 
 ### Fixed

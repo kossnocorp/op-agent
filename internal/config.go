@@ -25,7 +25,7 @@ const (
 // Server configuration stored in ~/.config/op-agent/config.json (or `%APPDATA%/op-agent/config.json` in Windows)
 // NOTE: We use JSON instead of TOML/YAML to avoid additional dependencies and reduce attack surface.
 type Config struct {
-	ApprovedCommands []string `json:"approved"`
+	ApprovedCommands [][]string `json:"approved"` // Array of command arrays to preserve argument boundaries
 }
 
 // Command request log entry.
@@ -103,7 +103,7 @@ func LoadConfig() (*Config, error) {
 
 	configPath := filepath.Join(configDir, "config.json")
 	config := &Config{
-		ApprovedCommands: []string{},
+		ApprovedCommands: [][]string{},
 	}
 
 	data, err := os.ReadFile(configPath)
@@ -142,9 +142,8 @@ func (c *Config) SaveConfig() error {
 }
 
 func (c *Config) IsCommandApproved(args []string) bool {
-	commandStr := strings.Join(args, " ")
 	for _, approved := range c.ApprovedCommands {
-		if approved == commandStr {
+		if commandsEqual(approved, args) {
 			return true
 		}
 	}
@@ -152,10 +151,24 @@ func (c *Config) IsCommandApproved(args []string) bool {
 }
 
 func (c *Config) AddApprovedCommand(args []string) {
-	commandStr := strings.Join(args, " ")
 	if !c.IsCommandApproved(args) {
-		c.ApprovedCommands = append(c.ApprovedCommands, commandStr)
+		// Make a copy to avoid slice aliasing issues
+		cmdCopy := make([]string, len(args))
+		copy(cmdCopy, args)
+		c.ApprovedCommands = append(c.ApprovedCommands, cmdCopy)
 	}
+}
+
+func commandsEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func LogCommandRequest(args []string, approved bool, source ApprovalSource) error {
