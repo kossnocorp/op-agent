@@ -78,17 +78,17 @@ func main() {
 					break
 				}
 			}
-			
+
 			// If no 'op' found, show help
 			if opIndex == -1 {
 				cmd.Help()
 				return
 			}
-			
+
 			// Parse client flags that appear BEFORE 'op'
 			clientArgs := args[:opIndex]
 			opArgs := args[opIndex+1:] // Everything after 'op'
-			
+
 			// Handle client flags (only those before 'op')
 			for _, arg := range clientArgs {
 				switch arg {
@@ -102,7 +102,7 @@ func main() {
 					return
 				}
 			}
-			
+
 			// Execute the op command with all arguments after 'op'
 			executeOpCommand(opArgs, quietFlag)
 		},
