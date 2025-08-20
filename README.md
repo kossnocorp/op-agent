@@ -274,15 +274,7 @@ OP_AGENT_HOST=192.168.1.100 op-agent-client op whoami
 
 ### Auto-Start on macOS
 
-To start `op-agent` automatically when you log in to macOS, you can add it as a Login Item:
-
-#### Via System Preferences
-
-- Open System Preferences → Users & Groups → Login Items
-- Click the `+` button and navigate to your `op-agent` binary
-- Add the binary with arguments: `start --non-interactive`
-
-#### Using `launchd`
+To start `op-agent` automatically when you log in to macOS, you can add it using `launchd`.
 
 Create a launch agent plist file at `~/Library/LaunchAgents/com.kossnocorp.op-agent.plist` (replacing `/Users/koss/.local/bin/op-agent` with the actual path):
 
@@ -317,7 +309,12 @@ Then load it:
 launchctl load ~/Library/LaunchAgents/com.kossnocorp.op-agent.plist
 ```
 
-**Note:** Update `~/.local/bin/op-agent` to the actual path of your `op-agent` binary.
+After upgrading, run these commands to reload the agent:
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.kossnocorp.op-agent.plist
+launchctl load ~/Library/LaunchAgents/com.kossnocorp.op-agent.plist
+```
 
 ## Security
 
