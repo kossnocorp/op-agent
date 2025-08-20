@@ -284,7 +284,7 @@ To start `op-agent` automatically when you log in to macOS, you can add it as a 
 
 #### Using `launchd`
 
-Create a launch agent plist file at `~/Library/LaunchAgents/com.kossnocorp.op-agent.plist` (replacing `~/.local/bin/op-agent` with the actual path):
+Create a launch agent plist file at `~/Library/LaunchAgents/com.kossnocorp.op-agent.plist` (replacing `/Users/koss/.local/bin/op-agent` with the actual path):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -295,7 +295,7 @@ Create a launch agent plist file at `~/Library/LaunchAgents/com.kossnocorp.op-ag
     <string>com.kossnocorp.op-agent</string>
     <key>ProgramArguments</key>
     <array>
-        <string>~/.local/bin/op-agent</string>
+        <string>/Users/koss/.local/bin/op-agent</string>
         <string>start</string>
         <string>--non-interactive</string>
     </array>
