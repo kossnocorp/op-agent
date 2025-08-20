@@ -1,0 +1,13 @@
+[tools]
+## Stack
+go = "latest"
+node = "lts"
+
+## Tools
+"npm:@anthropic-ai/claude-code" = "latest"
+
+[settings]
+# Enable extra features
+experimental = true
+# Consume Go version from .go-version, .tool-versions, etc.
+idiomatic_version_file_enable_tools = ["go"]
