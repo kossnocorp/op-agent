@@ -245,7 +245,7 @@ func main() {
 1Password CLI and its biometric authentication.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if versionFlag {
-				version()
+				opagent.PrintVersion()
 				return
 			}
 
@@ -340,8 +340,4 @@ func findAvailablePort(startPort int) (int, error) {
 		}
 	}
 	return 0, fmt.Errorf("no available port found")
-}
-
-func version() {
-	fmt.Printf("op-agent version %s\n", opagent.Version)
 }

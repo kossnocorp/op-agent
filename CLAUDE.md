@@ -25,6 +25,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `go fmt ./...` - Format Go code
 - `go vet ./...` - Run Go static analysis
 
+## Usage
+
+### Version
+
+- `op-agent --version` - Print version number only (useful for automation and Ansible playbooks)
+
 ## CI/CD
 
 The repository includes GitHub Actions workflows:

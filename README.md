@@ -28,6 +28,9 @@ op-agent start --non-interactive
 
 # Start in insecure mode (UNSAFE - allows all commands)
 op-agent start --insecure
+
+# Print version number (useful for automation and Ansible playbooks)
+op-agent --version
 ```
 
 ### Pre-Approve

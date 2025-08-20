@@ -93,7 +93,7 @@ func main() {
 			for _, arg := range clientArgs {
 				switch arg {
 				case "--version":
-					version()
+					opagent.PrintVersion()
 					return
 				case "-q", "--quiet":
 					quietFlag = true
@@ -151,8 +151,4 @@ func inContainer() bool {
 		return true
 	}
 	return false
-}
-
-func version() {
-	fmt.Printf("op-agent-client version %s\n", opagent.Version)
 }
