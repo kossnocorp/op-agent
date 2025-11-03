@@ -58,7 +58,7 @@ jobs:
         cache: true
 
     - name: Install just
-      uses: extractions/setup-just@v2
+      uses: extractions/setup-just@v3
 
     - name: Get version from tag
       id: version
